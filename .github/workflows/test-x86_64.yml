@@ -1,0 +1,70 @@
+name: ruyi-pytest (x86_64 multi-distro)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ruyi_repo:
+        description: "Optional RUYI_REPO mirror (ISCAS/GITEE)"
+        required: false
+        default: "ISCAS"
+      pytest_args:
+        description: "Extra arguments passed to pytest"
+        required: false
+        default: ""
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        distro:
+          - debian_bookworm
+          - debian_trixie
+          - debian_sid
+          - ubuntu_jammy
+          - ubuntu_noble
+          - openeuler_2403_sp1
+          - openeuler_2403_sp2
+          - openeuler_2503
+          - archlinux
+          - fedora_42
+          - fedora_43
+          - deepin_beige
+          - deepin_crimson
+          - openkylin
+          - opencloudos
+
+    env:
+      RUYI_REPO: ${{ inputs.ruyi_repo }}
+      PYTEST_ARGS: ${{ inputs.pytest_args }}
+
+    steps:
+      - name: Checkout ruyi-pytest-ci
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build test image for ${{ matrix.distro }}
+        run: |
+          docker build \
+            -f docker/distros/${{ matrix.distro }}.Dockerfile \
+            -t ruyi-pytest-ci:${{ matrix.distro }} .
+
+      - name: Run pytest in Docker (${{ matrix.distro }})
+        run: |
+          mkdir -p artifacts/${{ matrix.distro }}
+          docker run --rm \
+            -e RUYI_REPO \
+            -e PYTEST_ARGS \
+            -e DISTRO_ID=${{ matrix.distro }} \
+            -v "$PWD/artifacts/${{ matrix.distro }}:/artifacts" \
+            ruyi-pytest-ci:${{ matrix.distro }}
+
+      - name: Upload artifacts for ${{ matrix.distro }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruyi-pytest-${{ matrix.distro }}
+          path: artifacts/${{ matrix.distro }}
+          if-no-files-found: error

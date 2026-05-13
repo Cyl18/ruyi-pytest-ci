@@ -1,0 +1,4 @@
+[submodule "ruyi-pytest"]
+	path = ruyi-pytest
+	url = https://github.com/ruyisdk-test/ruyi-pytest.git
+	branch = main

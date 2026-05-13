@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+PROJECT_ROOT=/ruyi-pytest-ci
+TEST_ROOT="${PROJECT_ROOT}/ruyi-pytest"
+ARTIFACTS_DIR=/artifacts
+
+log() {
+  printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
+}
+
+python_bin() {
+  if command -v python3 >/dev/null 2>&1; then
+    command -v python3
+  elif command -v python >/dev/null 2>&1; then
+    command -v python
+  else
+    return 1
+  fi
+}
+
+install_runtime_deps() {
+  if command -v apt-get >/dev/null 2>&1; then
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get update
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      bash bzip2 gzip lz4 tar xz-utils zstd unzip ca-certificates \
+      file expect git make sudo python3 python3-pip python3-venv
+  elif command -v dnf >/dev/null 2>&1; then
+    sudo dnf install -y \
+      bash bzip2 gzip lz4 tar xz zstd unzip ca-certificates \
+      file expect git make sudo python3 python3-pip
+  elif command -v pacman >/dev/null 2>&1; then
+    sudo pacman --noconfirm -Sy --needed \
+      bash bzip2 gzip lz4 tar xz zstd unzip ca-certificates \
+      file expect git make sudo python python-pip
+  else
+    log "Unsupported package manager in container"
+    return 1
+  fi
+}
+
+prepare_env_file() {
+  if [[ ! -f "${TEST_ROOT}/.env" ]]; then
+    cat > "${TEST_ROOT}/.env" <<EOF
+# Optional mirror selection for CI.
+# Valid values: ISCAS, GITEE
+RUYI_REPO=${RUYI_REPO:-ISCAS}
+EOF
+  fi
+}
+
+install_python_packages() {
+  local py
+  local pip_install_args=(install --user)
+
+  py="$(python_bin)"
+  if "$py" -m pip help install 2>/dev/null | grep -q -- '--break-system-packages'; then
+    pip_install_args+=(--break-system-packages)
+  fi
+
+  "$py" -m pip "${pip_install_args[@]}" --upgrade pip
+  "$py" -m pip "${pip_install_args[@]}" \
+    pytest \
+    pytest-env \
+    pexpect \
+    'ruyi>=0.47.0'
+}
+
+main() {
+  mkdir -p "${ARTIFACTS_DIR}"
+
+  log "Installing runtime dependencies"
+  install_runtime_deps
+
+  export PATH="${HOME}/.local/bin:${PATH}"
+  export LANG="${LANG:-en_US.UTF-8}"
+  export LC_ALL="${LC_ALL:-en_US.UTF-8}"
+
+  log "Python runtime: $(python_bin)"
+  install_python_packages
+  prepare_env_file
+
+  cd "${TEST_ROOT}"
+
+  log "pytest version: $(python_bin) -m pytest --version"
+  "$(python_bin)" -m pytest --version | tee "${ARTIFACTS_DIR}/pytest-version.txt"
+  log "ruyi version"
+  ruyi --version | tee "${ARTIFACTS_DIR}/ruyi-version.txt"
+
+  log "Running pytest for ${DISTRO_ID:-unknown-distro}"
+  "$(python_bin)" -m pytest -ra \
+    --junitxml "${ARTIFACTS_DIR}/pytest.xml" \
+    ${PYTEST_ARGS:-} \
+    2>&1 | tee "${ARTIFACTS_DIR}/pytest.log"
+}
+
+main "$@"
