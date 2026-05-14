@@ -72,6 +72,7 @@ install_libgit2_build_deps() {
 install_libgit2_from_source() {
   local build_dir
   local archive
+  local work_dir
 
   if [[ "$(uname -m)" != "riscv64" ]]; then
     return 0
@@ -82,14 +83,15 @@ install_libgit2_from_source() {
     return 0
   fi
 
-  build_dir="/tmp/libgit2-${LIBGIT2_VERSION}"
-  archive="/tmp/libgit2-${LIBGIT2_VERSION}.tar.gz"
+  work_dir="$(mktemp -d)"
+  build_dir="${work_dir}/libgit2-${LIBGIT2_VERSION}"
+  archive="${work_dir}/libgit2-${LIBGIT2_VERSION}.tar.gz"
+  trap 'rm -rf "${work_dir}"' EXIT
 
   log "Installing libgit2 ${LIBGIT2_VERSION} from source"
   install_libgit2_build_deps
-  rm -rf "${build_dir}" "${archive}"
   wget -q "https://github.com/libgit2/libgit2/archive/refs/tags/v${LIBGIT2_VERSION}.tar.gz" -O "${archive}"
-  tar -xzf "${archive}" -C /tmp
+  tar -xzf "${archive}" -C "${work_dir}"
   cmake -S "${build_dir}" -B "${build_dir}/build" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr/local \
