@@ -5,18 +5,27 @@ set -euo pipefail
 PROJECT_ROOT=/ruyi-pytest-ci
 TEST_ROOT="${PROJECT_ROOT}/ruyi-pytest"
 ARTIFACTS_DIR=/artifacts
+CI_VENV_DIR="${PROJECT_ROOT}/.ci-venv"
 
 log() {
   printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
 }
 
-python_bin() {
+system_python_bin() {
   if command -v python3 >/dev/null 2>&1; then
     command -v python3
   elif command -v python >/dev/null 2>&1; then
     command -v python
   else
     return 1
+  fi
+}
+
+python_bin() {
+  if [[ -x "${CI_VENV_DIR}/bin/python" ]]; then
+    printf '%s\n' "${CI_VENV_DIR}/bin/python"
+  else
+    system_python_bin
   fi
 }
 
@@ -54,15 +63,13 @@ EOF
 
 install_python_packages() {
   local py
-  local pip_install_args=(install --user)
 
-  py="$(python_bin)"
-  if "$py" -m pip help install 2>/dev/null | grep -q -- '--break-system-packages'; then
-    pip_install_args+=(--break-system-packages)
-  fi
+  py="$(system_python_bin)"
+  rm -rf "${CI_VENV_DIR}"
+  "$py" -m venv "${CI_VENV_DIR}"
 
-  "$py" -m pip "${pip_install_args[@]}" --upgrade pip
-  "$py" -m pip "${pip_install_args[@]}" \
+  "${CI_VENV_DIR}/bin/python" -m pip install --upgrade pip
+  "${CI_VENV_DIR}/bin/python" -m pip install \
     pytest \
     pytest-env \
     pexpect \
@@ -77,12 +84,12 @@ main() {
   log "Installing runtime dependencies"
   install_runtime_deps
 
-  export PATH="${HOME}/.local/bin:${PATH}"
+  export PATH="${CI_VENV_DIR}/bin:${PATH}"
   export LANG="${LANG:-en_US.UTF-8}"
   export LC_ALL="${LC_ALL:-en_US.UTF-8}"
 
-  log "Python runtime: $(python_bin)"
   install_python_packages
+  log "Python runtime: $(python_bin)"
   prepare_env_file
 
   cd "${TEST_ROOT}"
