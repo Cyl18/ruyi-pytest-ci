@@ -3,6 +3,7 @@
 set -euo pipefail
 
 LIBGIT2_VERSION="${LIBGIT2_VERSION:-1.9.2}"
+LIBGIT2_WORK_DIR=""
 
 log() {
   printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
@@ -31,7 +32,6 @@ install_build_deps() {
 main() {
   local build_dir
   local archive
-  local work_dir
 
   if [[ "$(uname -m)" != "riscv64" ]]; then
     log "Skipping libgit2 source build for $(uname -m)"
@@ -43,15 +43,15 @@ main() {
     return 0
   fi
 
-  work_dir="$(mktemp -d)"
-  build_dir="${work_dir}/libgit2-${LIBGIT2_VERSION}"
-  archive="${work_dir}/libgit2-${LIBGIT2_VERSION}.tar.gz"
-  trap 'rm -rf "${work_dir}"' EXIT
+  LIBGIT2_WORK_DIR="$(mktemp -d)"
+  build_dir="${LIBGIT2_WORK_DIR}/libgit2-${LIBGIT2_VERSION}"
+  archive="${LIBGIT2_WORK_DIR}/libgit2-${LIBGIT2_VERSION}.tar.gz"
+  trap 'rm -rf "${LIBGIT2_WORK_DIR:-}"' EXIT
 
   log "Installing libgit2 ${LIBGIT2_VERSION} from source"
   install_build_deps
   wget -q "https://github.com/libgit2/libgit2/archive/refs/tags/v${LIBGIT2_VERSION}.tar.gz" -O "${archive}"
-  tar -xzf "${archive}" -C "${work_dir}"
+  tar -xzf "${archive}" -C "${LIBGIT2_WORK_DIR}"
   cmake -S "${build_dir}" -B "${build_dir}/build" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr/local \

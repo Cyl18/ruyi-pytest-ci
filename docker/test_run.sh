@@ -7,6 +7,7 @@ TEST_ROOT="${PROJECT_ROOT}/ruyi-pytest"
 ARTIFACTS_DIR=/artifacts
 CI_VENV_DIR="${PROJECT_ROOT}/.ci-venv"
 LIBGIT2_VERSION=1.9.2
+LIBGIT2_WORK_DIR=""
 
 log() {
   printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
@@ -72,7 +73,6 @@ install_libgit2_build_deps() {
 install_libgit2_from_source() {
   local build_dir
   local archive
-  local work_dir
 
   if [[ "$(uname -m)" != "riscv64" ]]; then
     return 0
@@ -83,15 +83,15 @@ install_libgit2_from_source() {
     return 0
   fi
 
-  work_dir="$(mktemp -d)"
-  build_dir="${work_dir}/libgit2-${LIBGIT2_VERSION}"
-  archive="${work_dir}/libgit2-${LIBGIT2_VERSION}.tar.gz"
-  trap 'rm -rf "${work_dir}"' EXIT
+  LIBGIT2_WORK_DIR="$(mktemp -d)"
+  build_dir="${LIBGIT2_WORK_DIR}/libgit2-${LIBGIT2_VERSION}"
+  archive="${LIBGIT2_WORK_DIR}/libgit2-${LIBGIT2_VERSION}.tar.gz"
+  trap 'rm -rf "${LIBGIT2_WORK_DIR:-}"' EXIT
 
   log "Installing libgit2 ${LIBGIT2_VERSION} from source"
   install_libgit2_build_deps
   wget -q "https://github.com/libgit2/libgit2/archive/refs/tags/v${LIBGIT2_VERSION}.tar.gz" -O "${archive}"
-  tar -xzf "${archive}" -C "${work_dir}"
+  tar -xzf "${archive}" -C "${LIBGIT2_WORK_DIR}"
   cmake -S "${build_dir}" -B "${build_dir}/build" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr/local \
