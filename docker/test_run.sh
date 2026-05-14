@@ -82,6 +82,11 @@ install_libgit2_from_source() {
     return 0
   fi
 
+  if pkg-config --exists libgit2 && [[ "$(pkg-config --modversion libgit2)" == "${LIBGIT2_VERSION}" ]]; then
+    log "libgit2 ${LIBGIT2_VERSION} already installed"
+    return 0
+  fi
+
   build_dir="/tmp/libgit2-${LIBGIT2_VERSION}"
   archive="/tmp/libgit2-${LIBGIT2_VERSION}.tar.gz"
 

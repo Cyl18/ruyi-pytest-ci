@@ -5,6 +5,8 @@ WORKDIR /ruyi-pytest-ci
 
 ENV DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
 RUN apt-get update && apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" && apt-get install -y llvm-14-tools coreutils util-linux file expect sudo git make tar jq build-essential locales tzdata wget zstd python3-pip && apt-get clean
+COPY docker/build_libgit2.sh /tmp/build_libgit2.sh
+RUN bash /tmp/build_libgit2.sh
 RUN sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && locale-gen en_US.UTF-8 && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 RUN pip install yq
 
