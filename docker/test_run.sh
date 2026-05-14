@@ -34,15 +34,15 @@ install_runtime_deps() {
     sudo env DEBIAN_FRONTEND=noninteractive apt-get update
     sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
       bash bzip2 gzip lz4 tar xz-utils zstd unzip ca-certificates \
-      file expect git make sudo python3 python3-pip python3-venv
+      file expect git make sudo python3 python3-pip python3-venv libffi-dev
   elif command -v dnf >/dev/null 2>&1; then
     sudo dnf install -y \
       bash bzip2 gzip lz4 tar xz zstd unzip ca-certificates \
-      file expect git make sudo python3 python3-pip
+      file expect git make sudo python3 python3-pip libffi-devel
   elif command -v pacman >/dev/null 2>&1; then
     sudo pacman --noconfirm -Sy --needed \
       bash bzip2 gzip lz4 tar xz zstd unzip ca-certificates \
-      file expect git make sudo python python-pip
+      file expect git make sudo python python-pip libffi
   else
     log "Unsupported package manager in container"
     return 1
