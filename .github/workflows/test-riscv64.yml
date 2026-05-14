@@ -26,6 +26,7 @@ jobs:
           - ubuntu_noble
           - deepin_beige_riscv64
           - deepin_crimson_riscv64
+          - openkylin
 
     env:
       RUYI_REPO: ${{ inputs.ruyi_repo }}

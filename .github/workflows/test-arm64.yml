@@ -31,6 +31,7 @@ jobs:
           - fedora_42
           - fedora_43
           - deepin_crimson_arm64
+          - openkylin
           - opencloudos
 
     env:
