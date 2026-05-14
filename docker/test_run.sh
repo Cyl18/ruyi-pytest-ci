@@ -74,6 +74,7 @@ install_python_packages() {
     pytest \
     pytest-env \
     pexpect \
+    'pygit2<1.19' \
     'ruyi>=0.47.0'
 }
 
