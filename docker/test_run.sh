@@ -35,19 +35,32 @@ install_runtime_deps() {
     sudo env DEBIAN_FRONTEND=noninteractive apt-get update
     sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
       bash bzip2 gzip lz4 tar xz-utils zstd unzip ca-certificates \
-      file expect git make sudo python3 python3-pip python3-venv \
+      file git make sudo python3 python3-pip python3-venv
+  elif command -v dnf >/dev/null 2>&1; then
+    sudo dnf install -y \
+      bash bzip2 gzip lz4 tar xz zstd unzip ca-certificates \
+      file git make sudo python3 python3-pip
+  elif command -v pacman >/dev/null 2>&1; then
+    sudo pacman --noconfirm -Sy --needed \
+      bash bzip2 gzip lz4 tar xz zstd unzip ca-certificates \
+      file git make sudo python python-pip
+  else
+    log "Unsupported package manager in container"
+    return 1
+  fi
+}
+
+install_libgit2_build_deps() {
+  if command -v apt-get >/dev/null 2>&1; then
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
       gcc g++ cmake pkg-config wget \
       libffi-dev libssl-dev libssh2-1-dev zlib1g-dev libhttp-parser-dev
   elif command -v dnf >/dev/null 2>&1; then
     sudo dnf install -y \
-      bash bzip2 gzip lz4 tar xz zstd unzip ca-certificates \
-      file expect git make sudo python3 python3-pip \
       gcc gcc-c++ cmake pkgconf-pkg-config wget \
       libffi-devel openssl-devel libssh2-devel zlib-devel http-parser-devel
   elif command -v pacman >/dev/null 2>&1; then
     sudo pacman --noconfirm -Sy --needed \
-      bash bzip2 gzip lz4 tar xz zstd unzip ca-certificates \
-      file expect git make sudo python python-pip \
       base-devel cmake pkgconf wget \
       libffi openssl libssh2 zlib http-parser
   else
@@ -68,6 +81,7 @@ install_libgit2_from_source() {
   archive="/tmp/libgit2-${LIBGIT2_VERSION}.tar.gz"
 
   log "Installing libgit2 ${LIBGIT2_VERSION} from source"
+  install_libgit2_build_deps
   rm -rf "${build_dir}" "${archive}"
   wget -q "https://github.com/libgit2/libgit2/archive/refs/tags/v${LIBGIT2_VERSION}.tar.gz" -O "${archive}"
   tar -xzf "${archive}" -C /tmp
