@@ -2,6 +2,7 @@ FROM openkylin/openkylin:2.0 AS builder
 ARG ARCH
 WORKDIR /ruyi-pytest-ci
 
+RUN find /etc/apt -type f -name '*.list' -exec sed -i -E '/nile(\.bedrock)?-proposed|nile-proposed/s/^/# disabled for CI: /' {} +
 RUN apt-get update && apt-get install -y llvm-17-tools coreutils util-linux grep procps bash sudo git python3.12-venv wget build-essential zstd locales && apt-get clean
 COPY docker/build_libgit2.sh /tmp/build_libgit2.sh
 RUN bash /tmp/build_libgit2.sh
