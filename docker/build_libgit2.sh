@@ -59,6 +59,7 @@ main() {
     -DBUILD_TESTS=OFF
   cmake --build "${build_dir}/build" --parallel "$(nproc)"
   cmake --install "${build_dir}/build"
+  printf '/usr/local/lib\n/usr/local/lib64\n' > /etc/ld.so.conf.d/ruyi-libgit2.conf
   ldconfig
 }
 
