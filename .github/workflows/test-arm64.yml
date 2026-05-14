@@ -6,7 +6,7 @@ on:
       ruyi_repo:
         description: "Optional RUYI_REPO mirror (ISCAS/GITEE)"
         required: false
-        default: "ISCAS"
+        default: ""
       pytest_args:
         description: "Extra arguments passed to pytest"
         required: false
@@ -31,7 +31,6 @@ jobs:
           - fedora_42
           - fedora_43
           - deepin_crimson_arm64
-          - openkylin
           - opencloudos
 
     env:

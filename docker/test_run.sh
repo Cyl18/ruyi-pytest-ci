@@ -41,12 +41,14 @@ install_runtime_deps() {
 }
 
 prepare_env_file() {
-  if [[ ! -f "${TEST_ROOT}/.env" ]]; then
+  if [[ -n "${RUYI_REPO:-}" ]]; then
     cat > "${TEST_ROOT}/.env" <<EOF
 # Optional mirror selection for CI.
 # Valid values: ISCAS, GITEE
-RUYI_REPO=${RUYI_REPO:-ISCAS}
+RUYI_REPO=${RUYI_REPO}
 EOF
+  else
+    rm -f "${TEST_ROOT}/.env"
   fi
 }
 

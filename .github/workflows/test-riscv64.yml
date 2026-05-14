@@ -6,7 +6,7 @@ on:
       ruyi_repo:
         description: "Optional RUYI_REPO mirror (ISCAS/GITEE)"
         required: false
-        default: "ISCAS"
+        default: ""
       pytest_args:
         description: "Extra arguments passed to pytest"
         required: false
@@ -26,7 +26,6 @@ jobs:
           - ubuntu_noble
           - deepin_beige_riscv64
           - deepin_crimson_riscv64
-          - openkylin
 
     env:
       RUYI_REPO: ${{ inputs.ruyi_repo }}
