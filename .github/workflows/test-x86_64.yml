@@ -62,8 +62,9 @@ jobs:
             ruyi-pytest-ci:${{ matrix.distro }}
 
       - name: Upload artifacts for ${{ matrix.distro }}
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ruyi-pytest-${{ matrix.distro }}
           path: artifacts/${{ matrix.distro }}
-          if-no-files-found: error
+          if-no-files-found: warn
