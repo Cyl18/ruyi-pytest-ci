@@ -69,6 +69,8 @@ install_python_packages() {
 
 main() {
   mkdir -p "${ARTIFACTS_DIR}"
+  sudo chown -R "$(id -u):$(id -g)" "${ARTIFACTS_DIR}"
+  sudo chmod -R u+rwX "${ARTIFACTS_DIR}"
 
   log "Installing runtime dependencies"
   install_runtime_deps
