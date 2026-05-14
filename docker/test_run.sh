@@ -6,6 +6,7 @@ PROJECT_ROOT=/ruyi-pytest-ci
 TEST_ROOT="${PROJECT_ROOT}/ruyi-pytest"
 ARTIFACTS_DIR=/artifacts
 CI_VENV_DIR="${PROJECT_ROOT}/.ci-venv"
+LIBGIT2_VERSION=1.9.2
 
 log() {
   printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
@@ -35,19 +36,48 @@ install_runtime_deps() {
     sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
       bash bzip2 gzip lz4 tar xz-utils zstd unzip ca-certificates \
       file expect git make sudo python3 python3-pip python3-venv \
-      libffi-dev libgit2-dev
+      gcc g++ cmake pkg-config wget \
+      libffi-dev libssl-dev libssh2-1-dev zlib1g-dev libhttp-parser-dev
   elif command -v dnf >/dev/null 2>&1; then
     sudo dnf install -y \
       bash bzip2 gzip lz4 tar xz zstd unzip ca-certificates \
-      file expect git make sudo python3 python3-pip libffi-devel libgit2-devel
+      file expect git make sudo python3 python3-pip \
+      gcc gcc-c++ cmake pkgconf-pkg-config wget \
+      libffi-devel openssl-devel libssh2-devel zlib-devel http-parser-devel
   elif command -v pacman >/dev/null 2>&1; then
     sudo pacman --noconfirm -Sy --needed \
       bash bzip2 gzip lz4 tar xz zstd unzip ca-certificates \
-      file expect git make sudo python python-pip libffi libgit2
+      file expect git make sudo python python-pip \
+      base-devel cmake pkgconf wget \
+      libffi openssl libssh2 zlib http-parser
   else
     log "Unsupported package manager in container"
     return 1
   fi
+}
+
+install_libgit2_from_source() {
+  local build_dir
+  local archive
+
+  if [[ "$(uname -m)" != "riscv64" ]]; then
+    return 0
+  fi
+
+  build_dir="/tmp/libgit2-${LIBGIT2_VERSION}"
+  archive="/tmp/libgit2-${LIBGIT2_VERSION}.tar.gz"
+
+  log "Installing libgit2 ${LIBGIT2_VERSION} from source"
+  rm -rf "${build_dir}" "${archive}"
+  wget -q "https://github.com/libgit2/libgit2/archive/refs/tags/v${LIBGIT2_VERSION}.tar.gz" -O "${archive}"
+  tar -xzf "${archive}" -C /tmp
+  cmake -S "${build_dir}" -B "${build_dir}/build" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr/local \
+    -DBUILD_TESTS=OFF
+  cmake --build "${build_dir}/build" --parallel "$(nproc)"
+  sudo cmake --install "${build_dir}/build"
+  sudo ldconfig
 }
 
 prepare_env_file() {
@@ -74,7 +104,6 @@ install_python_packages() {
     pytest \
     pytest-env \
     pexpect \
-    'pygit2<1.19' \
     'ruyi>=0.47.0'
 }
 
@@ -85,6 +114,7 @@ main() {
 
   log "Installing runtime dependencies"
   install_runtime_deps
+  install_libgit2_from_source
 
   export PATH="${CI_VENV_DIR}/bin:${PATH}"
   export LANG="${LANG:-en_US.UTF-8}"
