@@ -1,7 +1,8 @@
 FROM opencloudos/opencloudos9-minimal:latest AS builder
 WORKDIR /ruyi-pytest-ci
 
-RUN dnf install -y python3-lit llvm coreutils util-linux grep procps bash sudo git wget make zstd openssl jq glibc-locale-source python3-pip xz
+RUN sed -i 's|https://mirrors.opencloudos.tech/opencloudos|https://mirrors.opencloudos.org/opencloudos|g' /etc/yum.repos.d/*.repo && \
+    dnf --setopt=retries=5 --setopt=timeout=30 install -y python3-lit llvm coreutils util-linux grep procps bash sudo git wget make zstd openssl jq glibc-locale-source python3-pip xz
 RUN pip install yq
 RUN echo 'LANG=en_US.UTF-8' > /etc/locale.conf
 

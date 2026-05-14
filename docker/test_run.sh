@@ -54,7 +54,12 @@ install_libgit2_build_deps() {
   if command -v apt-get >/dev/null 2>&1; then
     sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
       gcc g++ cmake pkg-config wget \
-      libffi-dev libssl-dev libssh2-1-dev zlib1g-dev libhttp-parser-dev
+      libffi-dev libssl-dev libssh2-1-dev zlib1g-dev
+    if apt-cache show libhttp-parser-dev >/dev/null 2>&1; then
+      sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y libhttp-parser-dev
+    else
+      log "Skipping unavailable optional package: libhttp-parser-dev"
+    fi
   elif command -v dnf >/dev/null 2>&1; then
     sudo dnf install -y \
       gcc gcc-c++ cmake pkgconf-pkg-config wget \
@@ -88,6 +93,7 @@ install_libgit2_from_source() {
   cmake -S "${build_dir}" -B "${build_dir}/build" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr/local \
+    -DUSE_HTTP_PARSER=builtin \
     -DBUILD_TESTS=OFF
   cmake --build "${build_dir}/build" --parallel "$(nproc)"
   sudo cmake --install "${build_dir}/build"
