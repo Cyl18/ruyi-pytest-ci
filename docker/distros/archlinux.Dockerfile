@@ -1,5 +1,5 @@
 FROM archlinux/archlinux:latest AS builder
-WORKDIR /ruyi-litester
+WORKDIR /ruyi-pytest-ci
 
 # RUN echo "Server = https://mirrors.tuna.tsinghua.edu.cn/archlinux/\$repo/os/\$arch" > /etc/pacman.d/mirrorlist
 # RUN sed -i '/^NoExtract  = usr\/share\/locale\/\* usr\/share\/X11\/locale\/\* usr\/share\/i18n\/\*/d' /etc/pacman.conf
@@ -12,9 +12,9 @@ ARG UNAME=ruyisdk_test
 RUN useradd -mG wheel -s /bin/bash $UNAME
 RUN echo '%wheel ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-WORKDIR /ruyi-litester
+WORKDIR /ruyi-pytest-ci
 COPY . .
-RUN chown -R $UNAME:$UNAME /ruyi-litester
+RUN chown -R $UNAME:$UNAME /ruyi-pytest-ci
 USER $UNAME
 
 ENTRYPOINT ["docker/test_run.sh"]

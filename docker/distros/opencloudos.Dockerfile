@@ -1,5 +1,5 @@
 FROM opencloudos/opencloudos9-minimal:latest AS builder
-WORKDIR /ruyi-litester
+WORKDIR /ruyi-pytest-ci
 
 RUN dnf install -y python3-lit llvm coreutils util-linux grep procps bash sudo git wget make zstd openssl jq glibc-locale-source python3-pip xz
 RUN pip install yq
@@ -10,9 +10,9 @@ ARG UNAME=ruyisdk_test
 RUN useradd -mG wheel -s /bin/bash $UNAME
 RUN echo '%wheel ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-WORKDIR /ruyi-litester
+WORKDIR /ruyi-pytest-ci
 COPY . .
-RUN chown -R $UNAME:$UNAME /ruyi-litester
+RUN chown -R $UNAME:$UNAME /ruyi-pytest-ci
 USER $UNAME
 
 

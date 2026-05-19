@@ -1,5 +1,5 @@
 FROM debian:sid AS builder
-WORKDIR /ruyi-litester
+WORKDIR /ruyi-pytest-ci
 
 # RUN rm -rf /etc/apt/sources.list.d && mkdir /etc/apt/sources.list.d && printf "Types: deb\nURIs: http://mirrors.ustc.edu.cn/debian\nSuites: bookworm\nComponents: main contrib\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg" > /etc/apt/sources.list.d/apt.sources
 
@@ -10,9 +10,9 @@ FROM builder
 ARG UNAME=ruyisdk_test
 RUN useradd -mG sudo -s /bin/bash $UNAME
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-WORKDIR /ruyi-litester
+WORKDIR /ruyi-pytest-ci
 COPY . .
-RUN chown -R $UNAME:$UNAME /ruyi-litester
+RUN chown -R $UNAME:$UNAME /ruyi-pytest-ci
 USER $UNAME
 
 ENTRYPOINT ["docker/test_run.sh"]

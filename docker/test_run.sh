@@ -2,106 +2,97 @@
 
 set -euo pipefail
 
-debug_env() {
-  echo "================ ENV DEBUG BEGIN ================"
-  echo "[DEBUG] date: $(date || echo 'date failed')"
-  echo "[DEBUG] whoami: $(whoami || echo 'whoami failed')"
-  echo "[DEBUG] id: $(id || echo 'id failed')"
-  echo "[DEBUG] pwd: $(pwd || echo 'pwd failed')"
-  echo "[DEBUG] shell options: \$- = $-"
+PROJECT_ROOT=/ruyi-pytest-ci
+TEST_ROOT="${PROJECT_ROOT}/ruyi-pytest"
+ARTIFACTS_DIR=/artifacts
+CI_VENV_DIR="${PROJECT_ROOT}/.ci-venv"
 
-  echo
-  echo "---- uname -a ----"
-  uname -a || true
-
-  echo
-  echo "---- /etc/os-release ----"
-  if [[ -r /etc/os-release ]]; then
-    cat /etc/os-release
-  else
-    echo "no /etc/os-release"
-  fi
-
-  echo
-  echo "---- lsb_release -a ----"
-  if command -v lsb_release >/dev/null 2>&1; then
-    lsb_release -a || true
-  else
-    echo "lsb_release not installed"
-  fi
-
-  echo
-  echo "---- locale ----"
-  if command -v locale >/dev/null 2>&1; then
-    locale || echo "locale command failed"
-  else
-    echo "locale command not found"
-  fi
-
-  echo
-  echo "---- LANG / LC_* ----"
-  echo "LANG=${LANG-<unset>}"
-  echo "LC_ALL=${LC_ALL-<unset>}"
-  env | grep '^LC_' || echo "no LC_* in env"
-
-  echo
-  echo "---- locale config files ----"
-  for f in /etc/locale.gen /etc/locale.conf /etc/default/locale; do
-    if [[ -r "$f" ]]; then
-      echo ">>> $f"
-      cat "$f"
-    else
-      echo ">>> $f (not present)"
-    fi
-  done
-
-  echo "---- timezone ----"
-  echo "TZ=${TZ-<unset>}"
-  if [ -L /etc/localtime ]; then
-    echo "/etc/localtime -> $(readlink -f /etc/localtime || true)"
-  elif [ -f /etc/localtime ]; then
-    echo "/etc/localtime is a regular file"
-  else
-    echo "/etc/localtime not found"
-  fi
-
-  echo
-  echo "---- env (sorted) ----"
-  env | sort
-
-  echo
-  echo "---- network ----"
-  for host in github.com wps.com; do
-    if bash -c ">/dev/tcp/${host}/443"; then
-      echo "[OK] $host: succeeded"
-    else
-      echo "[WARN] $host: failed"
-    fi
-  done
-
-  echo "================= ENV DEBUG END ================="
-  echo
+log() {
+  printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
 }
 
-debug_env
+system_python_bin() {
+  if command -v python3 >/dev/null 2>&1; then
+    command -v python3
+  elif command -v python >/dev/null 2>&1; then
+    command -v python
+  else
+    return 1
+  fi
+}
 
-[ -d ~/.config/ruyi ] && rm -rf ~/.config/ruyi
-rm -rf /tmp/rit.bash
+install_runtime_deps() {
+  if command -v apt-get >/dev/null 2>&1; then
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get update
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      bash bzip2 gzip lz4 tar xz-utils zstd unzip ca-certificates \
+      file git make sudo python3 python3-pip python3-venv
+  elif command -v dnf >/dev/null 2>&1; then
+    sudo dnf install -y \
+      bash bzip2 gzip lz4 tar xz zstd unzip ca-certificates \
+      file git make sudo python3 python3-pip
+  elif command -v pacman >/dev/null 2>&1; then
+    sudo pacman --noconfirm -Sy --needed \
+      bash bzip2 gzip lz4 tar xz zstd unzip ca-certificates \
+      file git make sudo python python-pip
+  else
+    log "Unsupported package manager in container"
+    return 1
+  fi
+}
 
-./rit.bash ruyi -p ruyi-bin
-
-cat >> ruyi-litester-reports/report_my_configs.sh <<EOF
-TEST_LITESTER_PATH=$(pwd)
-TEST_START_TIME=${TEST_START_TIME}
+prepare_env_file() {
+  if [[ -n "${RUYI_REPO:-}" ]]; then
+    cat > "${TEST_ROOT}/.env" <<EOF
+RUYI_REPO=${RUYI_REPO}
 EOF
+  else
+    rm -f "${TEST_ROOT}/.env"
+  fi
+}
 
-DISTRO_ID=${DISTRO_ID}-$(uname -m)
-cp -v ruyi_ruyi-bin_ruyi-basic_*.log ruyi-litester-reports/report_tmpl/26test_log.md
-bash ruyi-litester-reports/report_gen.sh ${DISTRO_ID}
+install_python_packages() {
+  local py
 
-rm -f *.md
+  py="$(system_python_bin)"
+  rm -rf "${CI_VENV_DIR}"
+  "$py" -m venv "${CI_VENV_DIR}"
 
-sudo mv ruyi-test-logs.tar.gz /artifacts/ruyi-test-${DISTRO_ID}-logs.tar.gz
-sudo mv ruyi-test-logs_failed.tar.gz /artifacts/ruyi-test-${DISTRO_ID}-logs_failed.tar.gz
-sudo mv ruyi_report/*.md /artifacts/
+  "${CI_VENV_DIR}/bin/python" -m pip install --upgrade pip
+  "${CI_VENV_DIR}/bin/python" -m pip install \
+    pytest \
+    pytest-env \
+    pexpect \
+    'ruyi>=0.47.0'
+}
 
+main() {
+  mkdir -p "${ARTIFACTS_DIR}"
+  sudo chown -R "$(id -u):$(id -g)" "${ARTIFACTS_DIR}"
+  sudo chmod -R u+rwX "${ARTIFACTS_DIR}"
+
+  log "Installing runtime dependencies"
+  install_runtime_deps
+
+  export PATH="${CI_VENV_DIR}/bin:${PATH}"
+  export LANG="${LANG:-en_US.UTF-8}"
+  export LC_ALL="${LC_ALL:-en_US.UTF-8}"
+
+  install_python_packages
+  prepare_env_file
+
+  cd "${TEST_ROOT}"
+
+  log "pytest version"
+  python -m pytest --version | tee "${ARTIFACTS_DIR}/pytest-version.txt"
+  log "ruyi version"
+  ruyi --version | tee "${ARTIFACTS_DIR}/ruyi-version.txt"
+
+  log "Running pytest for ${DISTRO_ID:-unknown-distro}"
+  python -m pytest -ra \
+    --junitxml "${ARTIFACTS_DIR}/pytest.xml" \
+    ${PYTEST_ARGS:-} \
+    2>&1 | tee "${ARTIFACTS_DIR}/pytest.log"
+}
+
+main "$@"

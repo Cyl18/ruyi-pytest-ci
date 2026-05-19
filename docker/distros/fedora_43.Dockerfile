@@ -1,5 +1,5 @@
 FROM fedora:43 AS builder
-WORKDIR /ruyi-litester
+WORKDIR /ruyi-pytest-ci
 
 # RUN sed -e 's|^metalink=|#metalink=|g' -e 's|^#baseurl=http://download.example/pub/fedora/linux|baseurl=https://mirrors.ustc.edu.cn/fedora|g' -i.bak /etc/yum.repos.d/fedora.repo /etc/yum.repos.d/fedora-updates.repo
 
@@ -13,9 +13,9 @@ ARG UNAME=ruyisdk_test
 RUN useradd -mG wheel -s /bin/bash $UNAME
 RUN echo '%wheel ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-WORKDIR /ruyi-litester
+WORKDIR /ruyi-pytest-ci
 COPY . .
-RUN chown -R $UNAME:$UNAME /ruyi-litester
+RUN chown -R $UNAME:$UNAME /ruyi-pytest-ci
 USER $UNAME
 
 
